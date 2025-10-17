@@ -4,8 +4,182 @@
 // Tema 4 - Árvores e Tabela Hash
 // Este código inicial serve como base para o desenvolvimento das estruturas de navegação, pistas e suspeitos.
 // Use as instruções de cada região para desenvolver o sistema completo com árvore binária, árvore de busca e tabela hash.
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define TAM_HASH 26 // Uma entrada para cada letra do alfabeto
+
+// 🌳 Estrutura da árvore binária de salas
+typedef struct Sala {
+    char nome[50];
+    struct Sala *esquerda;
+    struct Sala *direita;
+} Sala;
+
+// 🔍 Estrutura da árvore de busca binária (BST) para pistas
+typedef struct Pista {
+    char nome[50];
+    struct Pista *esquerda;
+    struct Pista *direita;
+} Pista;
+
+// 🕵️ Estrutura da tabela hash para suspeitos
+typedef struct Suspeito {
+    char pista[50];
+    char nome[50];
+    struct Suspeito *prox;
+} Suspeito;
+
+Suspeito *tabelaHash[TAM_HASH] = {NULL};
+
+// 🔧 Funções auxiliares
+int hash(char *str) {
+    return (str[0] - 'a') % TAM_HASH;
+}
+
+// 🌳 Criação da árvore de salas
+Sala* criarSala(char *nome, Sala *esq, Sala *dir) {
+    Sala *nova = malloc(sizeof(Sala));
+    strcpy(nova->nome, nome);
+    nova->esquerda = esq;
+    nova->direita = dir;
+    return nova;
+}
+
+// 🔍 Inserção na BST de pistas
+Pista* inserirPista(Pista *raiz, char *nome) {
+    if (!raiz) {
+        Pista *nova = malloc(sizeof(Pista));
+        strcpy(nova->nome, nome);
+        nova->esquerda = nova->direita = NULL;
+        return nova;
+    }
+    if (strcmp(nome, raiz->nome) < 0)
+        raiz->esquerda = inserirPista(raiz->esquerda, nome);
+    else if (strcmp(nome, raiz->nome) > 0)
+        raiz->direita = inserirPista(raiz->direita, nome);
+    return raiz;
+}
+
+// 🔍 Exibição em ordem alfabética
+void emOrdem(Pista *raiz) {
+    if (raiz) {
+        emOrdem(raiz->esquerda);
+        printf("- %s\n", raiz->nome);
+        emOrdem(raiz->direita);
+    }
+}
+
+// 🕵️ Inserção na tabela hash
+void inserirNaHash(char *pista, char *suspeito) {
+    int h = hash(pista);
+    Suspeito *novo = malloc(sizeof(Suspeito));
+    strcpy(novo->pista, pista);
+    strcpy(novo->nome, suspeito);
+    novo->prox = tabelaHash[h];
+    tabelaHash[h] = novo;
+}
+
+// 🕵️ Exibir pistas e suspeitos
+void exibirHash() {
+    printf("\n🔍 Pistas e Suspeitos:\n");
+    for (int i = 0; i < TAM_HASH; i++) {
+        Suspeito *atual = tabelaHash[i];
+        while (atual) {
+            printf("Pista: %s → Suspeito: %s\n", atual->pista, atual->nome);
+            atual = atual->prox;
+        }
+    }
+}
+
+// 🕵️ Determinar suspeito mais citado
+void suspeitoMaisCitado() {
+    char nomes[100][50];
+    int contadores[100] = {0};
+    int total = 0;
+
+    for (int i = 0; i < TAM_HASH; i++) {
+        Suspeito *atual = tabelaHash[i];
+        while (atual) {
+            int encontrado = 0;
+            for (int j = 0; j < total; j++) {
+                if (strcmp(nomes[j], atual->nome) == 0) {
+                    contadores[j]++;
+                    encontrado = 1;
+                    break;
+                }
+            }
+            if (!encontrado) {
+                strcpy(nomes[total], atual->nome);
+                contadores[total++] = 1;
+            }
+            atual = atual->prox;
+        }
+    }
+
+    int max = 0, idx = 0;
+    for (int i = 0; i < total; i++) {
+        if (contadores[i] > max) {
+            max = contadores[i];
+            idx = i;
+        }
+    }
+
+    printf("\n🏆 Suspeito mais citado: %s (%d pistas)\n", nomes[idx], max);
+}
+
+// 🎮 Exploração da mansão
+void explorarSalas(Sala *atual, Pista **raizPistas) {
+    char opcao;
+    while (atual) {
+        printf("\n📍 Você está na sala: %s\n", atual->nome);
+
+        // Nível Aventureiro: encontrar pistas
+        if (strcmp(atual->nome, "Biblioteca") == 0) {
+            *raizPistas = inserirPista(*raizPistas, "Livro Rasgado");
+            inserirNaHash("Livro Rasgado", "Sr. Moreira");
+        } else if (strcmp(atual->nome, "Cozinha") == 0) {
+            *raizPistas = inserirPista(*raizPistas, "Faca Suja");
+            inserirNaHash("Faca Suja", "Dona Clara");
+        }
+
+        printf("Escolha: [e] esquerda, [d] direita, [s] sair: ");
+        scanf(" %c", &opcao);
+
+        if (opcao == 'e')
+            atual = atual->esquerda;
+        else if (opcao == 'd')
+            atual = atual->direita;
+        else
+            break;
+    }
+}
 
 int main() {
+    // 🌳 Criar árvore de salas
+    Sala *sala1 = criarSala("Biblioteca", NULL, NULL);
+    Sala *sala2 = criarSala("Cozinha", NULL, NULL);
+    Sala *sala3 = criarSala("Hall", sala1, sala2);
+
+    // 🔍 Árvore de pistas
+    Pista *raizPistas = NULL;
+
+    // 🎮 Iniciar exploração
+    explorarSalas(sala3, &raizPistas);
+
+    // 🔍 Mostrar pistas encontradas
+    printf("\n📜 Pistas encontradas:\n");
+    emOrdem(raizPistas);
+
+    // 🕵️ Mostrar suspeitos
+    exibirHash();
+
+    // 🕵️ Mostrar suspeito mais citado
+    suspeitoMaisCitado();
+
+    return 0;
+}
 
     // 🌱 Nível Novato: Mapa da Mansão com Árvore Binária
     //
@@ -41,7 +215,4 @@ int main() {
     // - Para hashing simples, pode usar soma dos valores ASCII do nome ou primeira letra.
     // - Em caso de colisão, use lista encadeada para tratar.
     // - Modularize com funções como inicializarHash(), buscarSuspeito(), listarAssociacoes().
-
-    return 0;
-}
 
